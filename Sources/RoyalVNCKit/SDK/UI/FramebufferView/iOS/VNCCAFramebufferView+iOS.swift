@@ -171,6 +171,8 @@ public final class VNCCAFramebufferView: UIView, VNCFramebufferView {
 		}
 
 		frameSizeDidChange(frameRect.size)
+
+		installGestureRecognizers()
 	}
 
 	@available(*, unavailable)
@@ -190,6 +192,66 @@ public final class VNCCAFramebufferView: UIView, VNCFramebufferView {
 	public override func layoutSubviews() {
 		super.layoutSubviews()
 		frameSizeDidChange(bounds.size)
+	}
+
+	public override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+		var unhandled = Set<UIPress>()
+
+		for press in presses {
+			guard let key = press.key, forwardPressToVNC(key: key, down: true) else {
+				unhandled.insert(press)
+				continue
+			}
+		}
+
+		if !unhandled.isEmpty {
+			super.pressesBegan(unhandled, with: event)
+		}
+	}
+
+	public override func pressesEnded(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+		var unhandled = Set<UIPress>()
+
+		for press in presses {
+			guard let key = press.key, forwardPressToVNC(key: key, down: false) else {
+				unhandled.insert(press)
+				continue
+			}
+		}
+
+		if !unhandled.isEmpty {
+			super.pressesEnded(unhandled, with: event)
+		}
+	}
+
+	public override func pressesCancelled(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+		for press in presses {
+			if let key = press.key {
+				_ = forwardPressToVNC(key: key, down: false)
+			}
+		}
+
+		super.pressesCancelled(presses, with: event)
+	}
+
+	private func forwardPressToVNC(key: UIKey, down: Bool) -> Bool {
+		guard let connection else { return false }
+
+		let codes = VNCKeyCode.keyCodesFrom(uiKey: key)
+		guard !codes.isEmpty else {
+			connection.logger.logError("Ignoring unconvertable UIKey (HID: \(key.keyCode.rawValue))")
+			return false
+		}
+
+		for code in codes {
+			if down {
+				connection.keyDown(code)
+			} else {
+				connection.keyUp(code)
+			}
+		}
+
+		return true
 	}
 
 	func removeDisplayLink() {
