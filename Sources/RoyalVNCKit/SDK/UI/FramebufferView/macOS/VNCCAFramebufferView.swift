@@ -760,7 +760,7 @@ private extension VNCCAFramebufferView {
                                                                       mipmapped: false)
             
             descriptor.usage = [ .shaderRead ]
-            descriptor.storageMode = .shared
+            descriptor.storageMode = .managed
 
             self.ioSurfaceTexture = metalDevice.makeTexture(descriptor: descriptor,
                                                             iosurface: surface,
