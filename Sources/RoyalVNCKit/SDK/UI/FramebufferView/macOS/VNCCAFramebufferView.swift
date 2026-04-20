@@ -295,7 +295,16 @@ public final class VNCCAFramebufferView: NSView, VNCFramebufferView {
 	public override func otherMouseUp(with event: NSEvent) { handleOtherMouseUp(with: event) }
 	public override func otherMouseDragged(with event: NSEvent) { handleOtherMouseDragged(with: event) }
 
-	public override func scrollWheel(with event: NSEvent) { handleScrollWheel(with: event) }
+	public override func scrollWheel(with event: NSEvent) {
+		// Let trackpad scrolls (precise deltas) pan the enclosing scroll view
+		// instead of being forwarded to the remote as mouse-wheel events.
+		// Physical mouse wheels still scroll remote apps.
+		if event.hasPreciseScrollingDeltas {
+			nextResponder?.scrollWheel(with: event)
+		} else {
+			handleScrollWheel(with: event)
+		}
+	}
 
 	public override func keyDown(with event: NSEvent) { handleKeyDown(with: event) }
 	public override func keyUp(with event: NSEvent) { handleKeyUp(with: event) }
