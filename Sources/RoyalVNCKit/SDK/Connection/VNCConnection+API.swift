@@ -118,6 +118,40 @@ extension VNCConnection {
     }
 }
 
+// MARK: - Desktop Size
+public extension VNCConnection {
+#if canImport(ObjectiveC)
+    @objc
+#endif
+    func requestDesktopSize(width: UInt16, height: UInt16) {
+        // Reuse the current primary screen's id/flags so the server recognizes
+        // it as an update, not a new screen. Fall back to id 1 if we don't
+        // have a framebuffer yet.
+        let primaryID: UInt32
+        let primaryFlags: UInt32
+        if let first = framebuffer?.screens.first {
+            primaryID = first.id
+            primaryFlags = 0
+        } else {
+            primaryID = 1
+            primaryFlags = 0
+        }
+
+        let screen = VNCProtocol.Screen(id: primaryID,
+                                        xPosition: 0,
+                                        yPosition: 0,
+                                        width: width,
+                                        height: height,
+                                        flags: primaryFlags)
+
+        let message = VNCProtocol.SetDesktopSize(width: width,
+                                                 height: height,
+                                                 screens: [screen])
+
+        clientToServerMessageQueue.enqueue(message)
+    }
+}
+
 // MARK: - Keyboard Input
 public extension VNCConnection {
 	func keyDown(_ key: VNCKeyCode) {
