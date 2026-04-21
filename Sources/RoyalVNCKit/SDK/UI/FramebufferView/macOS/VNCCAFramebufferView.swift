@@ -752,32 +752,34 @@ private extension VNCCAFramebufferView {
             return nil
         }
 
-        if self.currentIOSurface !== surface ||
-            self.currentIOSurfaceSize != size ||
-            self.ioSurfaceTexture == nil {
-            let width = Int(size.width)
-            let height = Int(size.height)
+        // `.managed` storage keeps a GPU-side cache that does not observe
+        // CPU writes into the backing IOSurface, so a cached texture would
+        // blit stale pixels between framebuffer updates. Recreating the
+        // view per render forces the cache to be repopulated from the
+        // surface each time — texture creation from an existing IOSurface
+        // is cheap (it's a GPU view, not an allocation).
+        let width = Int(size.width)
+        let height = Int(size.height)
 
-            guard width > 0,
-                  height > 0 else {
-                return nil
-            }
-
-            let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: pixelFormat,
-                                                                      width: width,
-                                                                      height: height,
-                                                                      mipmapped: false)
-            
-            descriptor.usage = [ .shaderRead ]
-            descriptor.storageMode = .managed
-
-            self.ioSurfaceTexture = metalDevice.makeTexture(descriptor: descriptor,
-                                                            iosurface: surface,
-                                                            plane: 0)
-            
-            self.currentIOSurface = surface
-            self.currentIOSurfaceSize = size
+        guard width > 0,
+              height > 0 else {
+            return nil
         }
+
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: pixelFormat,
+                                                                  width: width,
+                                                                  height: height,
+                                                                  mipmapped: false)
+
+        descriptor.usage = [ .shaderRead ]
+        descriptor.storageMode = .managed
+
+        self.ioSurfaceTexture = metalDevice.makeTexture(descriptor: descriptor,
+                                                        iosurface: surface,
+                                                        plane: 0)
+
+        self.currentIOSurface = surface
+        self.currentIOSurfaceSize = size
 
         return self.ioSurfaceTexture
     }
